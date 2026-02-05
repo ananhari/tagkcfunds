@@ -252,7 +252,10 @@
                 const rows = text.split('\n');
                 let total = 0;
                 for (let i = 1; i < rows.length; i++) {
-                     const amount = parseFloat(rows[i].split(',')[0]);
+                     if (rows[i].trim() === '') continue; // Skip empty rows
+                    const columns = rows[i].split(',');
+                    // Column structure: Name (0), Date (1), Amount (2)
+                     const amount = parseFloat(columns[2]);
                      if (!isNaN(amount)) total += amount;
                  }
 
