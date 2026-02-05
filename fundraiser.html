@@ -163,6 +163,25 @@
             font-size: 1.2em;
             margin: 20px 0;
         }
+
+        .api-status {
+            background: #f0f0f0;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 15px;
+        }
+
+        .api-status.success {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .api-status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
     </style>
 </head>
 <body>
@@ -188,19 +207,25 @@
             <div class="goal-label">Goal: <span id="goalAmount">$5,000</span></div>
 
             <div class="update-info">
-                Page auto-refreshes every 30 seconds
+                Page auto-refreshes every 10 seconds
                 <div class="last-updated" id="lastUpdated"></div>
+                <div class="api-status" id="apiStatus">Using Google Sheets API - Real-time updates ⚡</div>
             </div>
         </div>
     </div>
 
     <script>
-        // Configuration
-        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSbsP_MTG9aesgbZ63vipISE2Uicp8YbTS9mAkvXiL4e2GWGFYeWlXCEblbXV8o9XWICIUA2s3jucbl/pub?output=csv'; // Replace with your published sheet URL
-        const GOAL_AMOUNT = 5000; // Set your fundraising goal
-        const REFRESH_INTERVAL = 30000; // 30 seconds
+        // ===== CONFIGURATION - UPDATE THESE VALUES =====
+        const API_KEY = 'AIzaSyBt3Se05KJ4nSdmKUWH_zgXraBt9uxqaTI';  // Replace with your Google API key
+        const SHEET_ID = '1gctLXgVWE-qs7XfQ60gfdR6kTAMNNVKn0UVBbiIouLQ';  // ✅ Your Sheet ID
+        const SHEET_NAME = 'Sheet1';   // Replace with your sheet tab name (check bottom of your Google Sheet)
+        const GOAL_AMOUNT = 5000;  // Set your fundraising goal
+        const REFRESH_INTERVAL = 10000;  // 10 seconds (you can change to 5000 for 5 seconds)
+        // =============================================
 
         let lastMilestone = 0;
+        let amountColumnIndex = -1;
+        let headerRow = [];
 
         // Function to trigger confetti
         function triggerConfetti() {
@@ -240,46 +265,84 @@
             }
         }
 
-        // Function to fetch data from Google Sheets
+        // Function to update API status
+        function updateApiStatus(message, isError = false) {
+            const statusEl = document.getElementById('apiStatus');
+            if (statusEl) {
+                statusEl.textContent = message;
+                statusEl.className = 'api-status ' + (isError ? 'error' : 'success');
+            }
+        }
+
+        // Function to fetch data from Google Sheets API
         async function fetchFundraisingData() {
             try {
-                // PRODUCTION MODE: Connected to Google Sheets
-                const response = await fetch(GOOGLE_SHEET_URL);
-                const text = await response.text();
-                const rows = text.split('\n');
+                // Validate configuration
+                if (API_KEY === 'YOUR_API_KEY_HERE' || SHEET_ID === 'YOUR_SHEET_ID_HERE') {
+                    throw new Error('Please update API_KEY and SHEET_ID in the code (lines 189-190)');
+                }
+
+                // Construct the Google Sheets API URL
+                const url = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}/values/${SHEET_NAME}?key=${API_KEY}`;
                 
-                if (rows.length < 2) {
-                    throw new Error('Sheet is empty or has no data');
+                console.log('Fetching from Google Sheets API...');
+                const response = await fetch(url);
+                
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error?.message || `API Error: ${response.status}`);
                 }
                 
-                // Find the "Amount" column automatically
-                const headerRow = rows[0].split(',').map(h => h.trim().toLowerCase());
-                const amountColumnIndex = headerRow.findIndex(h => h === 'amount');
+                const data = await response.json();
                 
+                if (!data.values || data.values.length < 2) {
+                    throw new Error('Sheet is empty or has no data rows');
+                }
+                
+                // First row is headers
                 if (amountColumnIndex === -1) {
-                    throw new Error('No "Amount" column found in sheet. Please add an "Amount" header.');
+                    headerRow = data.values[0].map(h => h.trim().toLowerCase());
+                    amountColumnIndex = headerRow.findIndex(h => h === 'amount');
+                    
+                    if (amountColumnIndex === -1) {
+                        throw new Error('No "Amount" column found. Please add an "Amount" header to your sheet.');
+                    }
+                    
+                    console.log(`✅ Found Amount column at index ${amountColumnIndex} (Column ${String.fromCharCode(65 + amountColumnIndex)})`);
+                    updateApiStatus(`✅ Connected! Amount column found in Column ${String.fromCharCode(65 + amountColumnIndex)}`);
                 }
-                
-                console.log(`Found Amount column at index ${amountColumnIndex} (Column ${String.fromCharCode(65 + amountColumnIndex)})`);
                 
                 // Calculate total from the Amount column
                 let total = 0;
-                for (let i = 1; i < rows.length; i++) {
-                    if (rows[i].trim() === '') continue; // Skip empty rows
-                    const columns = rows[i].split(',');
-                    const amount = parseFloat(columns[amountColumnIndex]);
-                    if (!isNaN(amount)) {
-                        total += amount;
+                for (let i = 1; i < data.values.length; i++) {
+                    const row = data.values[i];
+                    if (row.length > amountColumnIndex) {
+                        const amount = parseFloat(row[amountColumnIndex]);
+                        if (!isNaN(amount)) {
+                            total += amount;
+                        }
                     }
                 }
-
-                // DEMO MODE - Comment this out when using real Google Sheets
-                // const total = parseFloat(localStorage.getItem('demoTotal') || '1250.00');
                 
+                console.log(`💰 Total calculated: $${total.toFixed(2)}`);
                 updateDisplay(total);
+                
             } catch (error) {
                 console.error('Error fetching data:', error);
                 document.getElementById('loading').textContent = 'Error loading data: ' + error.message;
+                updateApiStatus('❌ ' + error.message, true);
+                
+                // Show helpful hints based on error type
+                if (error.message.includes('API_KEY') || error.message.includes('SHEET_ID')) {
+                    document.getElementById('loading').innerHTML += 
+                        '<br><br><small>Check lines 189-190 in the HTML file</small>';
+                } else if (error.message.includes('403') || error.message.includes('permission')) {
+                    document.getElementById('loading').innerHTML += 
+                        '<br><br><small>Make sure your Google Sheet is set to "Anyone with the link can view"</small>';
+                } else if (error.message.includes('404')) {
+                    document.getElementById('loading').innerHTML += 
+                        '<br><br><small>Check that your SHEET_ID and SHEET_NAME are correct</small>';
+                }
             }
         }
 
@@ -305,22 +368,13 @@
         }
 
         // Initialize
+        console.log('🚀 TAG KC Fundraiser initialized');
+        console.log(`📊 Sheet ID: ${SHEET_ID}`);
+        console.log(`📄 Sheet Name: ${SHEET_NAME}`);
+        console.log(`🔄 Refresh interval: ${REFRESH_INTERVAL / 1000} seconds`);
+        
         fetchFundraisingData();
         setInterval(fetchFundraisingData, REFRESH_INTERVAL);
-
-        // Demo controls (remove in production)
-        let demoTotal = parseFloat(localStorage.getItem('demoTotal') || '1250.00');
-        document.addEventListener('keydown', (e) => {
-            if (e.key === '+') {
-                demoTotal += 100;
-                localStorage.setItem('demoTotal', demoTotal);
-                fetchFundraisingData();
-            } else if (e.key === '-') {
-                demoTotal = Math.max(0, demoTotal - 100);
-                localStorage.setItem('demoTotal', demoTotal);
-                fetchFundraisingData();
-            }
-        });
     </script>
 </body>
 </html>
