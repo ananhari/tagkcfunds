@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TAG KC Karaoke Event - Fundraiser</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            max-width: 600px;
+            width: 100%;
+            padding: 40px;
+            text-align: center;
+        }
+
+        .logo {
+            width: 150px;
+            height: auto;
+            margin-bottom: 20px;
+            animation: fadeIn 1s ease-in;
+        }
+
+        h1 {
+            color: #333;
+            font-size: 2em;
+            margin-bottom: 10px;
+            animation: fadeIn 1.2s ease-in;
+        }
+
+        .event-title {
+            color: #667eea;
+            font-size: 1.5em;
+            font-weight: 600;
+            margin-bottom: 30px;
+            animation: fadeIn 1.4s ease-in;
+        }
+
+        .amount-display {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px 20px;
+            border-radius: 15px;
+            margin: 30px 0;
+            animation: fadeIn 1.6s ease-in;
+        }
+
+        .amount-label {
+            font-size: 1.2em;
+            margin-bottom: 10px;
+            opacity: 0.9;
+        }
+
+        .amount {
+            font-size: 4em;
+            font-weight: bold;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        .milestone {
+            font-size: 1em;
+            margin-top: 15px;
+            opacity: 0.9;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 30px;
+            background: #e0e0e0;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 20px 0;
+            position: relative;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+            border-radius: 15px;
+            transition: width 1s ease-out;
+            display: flex;
+            align-items: center;
+            justify-content: flex-end;
+            padding-right: 10px;
+            color: white;
+            font-weight: bold;
+        }
+
+        .goal-label {
+            color: #666;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+
+        .confetti {
+            position: fixed;
+            width: 10px;
+            height: 10px;
+            background: #f0f;
+            position: absolute;
+            animation: confetti-fall 3s linear forwards;
+        }
+
+        @keyframes confetti-fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+                transform: translateY(-20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+            }
+            50% {
+                transform: scale(1.05);
+            }
+        }
+
+        .update-info {
+            margin-top: 30px;
+            color: #666;
+            font-size: 0.9em;
+        }
+
+        .last-updated {
+            color: #999;
+            font-size: 0.8em;
+            margin-top: 10px;
+        }
+
+        .loading {
+            color: #667eea;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="new-logo25.jpg" alt="TAG KC Logo" class="logo">
+        <h1>Telugu Association of Greater Kansas City</h1>
+        <div class="event-title">Karaoke Event - Fundraiser</div>
+
+        <div id="loading" class="loading">Loading fundraising data...</div>
+
+        <div id="content" style="display: none;">
+            <div class="amount-display">
+                <div class="amount-label">Total Funds Collected</div>
+                <div class="amount" id="totalAmount">$0</div>
+                <div class="milestone" id="milestone"></div>
+            </div>
+
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressBar">
+                    <span id="progressPercent">0%</span>
+                </div>
+            </div>
+            <div class="goal-label">Goal: <span id="goalAmount">$5,000</span></div>
+
+            <div class="update-info">
+                Page auto-refreshes every 30 seconds
+                <div class="last-updated" id="lastUpdated"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Configuration
+        const GOOGLE_SHEET_URL = 'YOUR_GOOGLE_SHEET_URL_HERE'; // Replace with your published sheet URL
+        const GOAL_AMOUNT = 5000; // Set your fundraising goal
+        const REFRESH_INTERVAL = 30000; // 30 seconds
+
+        let lastMilestone = 0;
+
+        // Function to trigger confetti
+        function triggerConfetti() {
+            const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff', '#ffa500', '#ff1493'];
+            const confettiCount = 100;
+
+            for (let i = 0; i < confettiCount; i++) {
+                setTimeout(() => {
+                    const confetti = document.createElement('div');
+                    confetti.className = 'confetti';
+                    confetti.style.left = Math.random() * 100 + '%';
+                    confetti.style.background = colors[Math.floor(Math.random() * colors.length)];
+                    confetti.style.animationDelay = Math.random() * 0.5 + 's';
+                    confetti.style.width = (Math.random() * 10 + 5) + 'px';
+                    confetti.style.height = (Math.random() * 10 + 5) + 'px';
+                    document.body.appendChild(confetti);
+
+                    setTimeout(() => confetti.remove(), 3000);
+                }, i * 10);
+            }
+        }
+
+        // Function to check for milestone and trigger confetti
+        function checkMilestone(amount) {
+            const currentMilestone = Math.floor(amount / 1000) * 1000;
+            if (currentMilestone > lastMilestone && lastMilestone > 0) {
+                triggerConfetti();
+            }
+            lastMilestone = currentMilestone;
+
+            const nextMilestone = Math.ceil(amount / 1000) * 1000;
+            const remaining = nextMilestone - amount;
+            
+            if (amount >= 1000) {
+                document.getElementById('milestone').textContent = 
+                    `🎉 $${remaining.toFixed(2)} to next milestone ($${nextMilestone})`;
+            }
+        }
+
+        // Function to fetch data from Google Sheets
+        async function fetchFundraisingData() {
+            try {
+                // This is a placeholder - you'll need to replace with actual Google Sheets integration
+                // For now, simulating with demo data
+                
+                // Option 1: Using Google Sheets published as CSV
+                // const response = await fetch(GOOGLE_SHEET_URL);
+                // const text = await response.text();
+                // const rows = text.split('\n');
+                // let total = 0;
+                // for (let i = 1; i < rows.length; i++) {
+                //     const amount = parseFloat(rows[i].split(',')[0]);
+                //     if (!isNaN(amount)) total += amount;
+                // }
+
+                // DEMO MODE - Replace this with actual Google Sheets data
+                const total = parseFloat(localStorage.getItem('demoTotal') || '1250.00');
+                
+                updateDisplay(total);
+            } catch (error) {
+                console.error('Error fetching data:', error);
+                document.getElementById('loading').textContent = 'Error loading data. Please refresh.';
+            }
+        }
+
+        // Function to update display
+        function updateDisplay(total) {
+            document.getElementById('loading').style.display = 'none';
+            document.getElementById('content').style.display = 'block';
+
+            document.getElementById('totalAmount').textContent = 
+                '$' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+            const percentage = Math.min((total / GOAL_AMOUNT) * 100, 100);
+            document.getElementById('progressBar').style.width = percentage + '%';
+            document.getElementById('progressPercent').textContent = percentage.toFixed(1) + '%';
+            document.getElementById('goalAmount').textContent = 
+                '$' + GOAL_AMOUNT.toFixed(0).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+
+            checkMilestone(total);
+
+            const now = new Date();
+            document.getElementById('lastUpdated').textContent = 
+                'Last updated: ' + now.toLocaleString();
+        }
+
+        // Initialize
+        fetchFundraisingData();
+        setInterval(fetchFundraisingData, REFRESH_INTERVAL);
+
+        // Demo controls (remove in production)
+        let demoTotal = parseFloat(localStorage.getItem('demoTotal') || '1250.00');
+        document.addEventListener('keydown', (e) => {
+            if (e.key === '+') {
+                demoTotal += 100;
+                localStorage.setItem('demoTotal', demoTotal);
+                fetchFundraisingData();
+            } else if (e.key === '-') {
+                demoTotal = Math.max(0, demoTotal - 100);
+                localStorage.setItem('demoTotal', demoTotal);
+                fetchFundraisingData();
+            }
+        });
+    </script>
+</body>
+</html>
