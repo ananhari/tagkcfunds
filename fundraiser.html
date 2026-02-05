@@ -196,7 +196,7 @@
 
     <script>
         // Configuration
-        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSbsP_MTG9aesgbZ63vipISE2Uicp8YbTS9mAkvXiL4e2GWGFYeWlXCEblbXV8o9XWICIUA2s3jucbl/pub?gid=0&single=true&output=csv'; // Replace with your published sheet URL
+        const GOOGLE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/e/2PACX-1vSbsP_MTG9aesgbZ63vipISE2Uicp8YbTS9mAkvXiL4e2GWGFYeWlXCEblbXV8o9XWICIUA2s3jucbl/pubhtml?gid=0&single=true'; // Replace with your published sheet URL
         const GOAL_AMOUNT = 5000; // Set your fundraising goal
         const REFRESH_INTERVAL = 30000; // 30 seconds
 
@@ -243,29 +243,43 @@
         // Function to fetch data from Google Sheets
         async function fetchFundraisingData() {
             try {
-                // This is a placeholder - you'll need to replace with actual Google Sheets integration
-                // For now, simulating with demo data
-                
-                // Option 1: Using Google Sheets published as CSV
+                // PRODUCTION MODE: Connected to Google Sheets
                 const response = await fetch(GOOGLE_SHEET_URL);
                 const text = await response.text();
                 const rows = text.split('\n');
+                
+                if (rows.length < 2) {
+                    throw new Error('Sheet is empty or has no data');
+                }
+                
+                // Find the "Amount" column automatically
+                const headerRow = rows[0].split(',').map(h => h.trim().toLowerCase());
+                const amountColumnIndex = headerRow.findIndex(h => h === 'amount');
+                
+                if (amountColumnIndex === -1) {
+                    throw new Error('No "Amount" column found in sheet. Please add an "Amount" header.');
+                }
+                
+                console.log(`Found Amount column at index ${amountColumnIndex} (Column ${String.fromCharCode(65 + amountColumnIndex)})`);
+                
+                // Calculate total from the Amount column
                 let total = 0;
                 for (let i = 1; i < rows.length; i++) {
-                     if (rows[i].trim() === '') continue; // Skip empty rows
+                    if (rows[i].trim() === '') continue; // Skip empty rows
                     const columns = rows[i].split(',');
-                    // Column structure: Name (0), Date (1), Amount (2)
-                     const amount = parseFloat(columns[2]);
-                     if (!isNaN(amount)) total += amount;
-                 }
+                    const amount = parseFloat(columns[amountColumnIndex]);
+                    if (!isNaN(amount)) {
+                        total += amount;
+                    }
+                }
 
-                // DEMO MODE - Replace this with actual Google Sheets data
-                //const total = parseFloat(localStorage.getItem('demoTotal') || '1250.00');
+                // DEMO MODE - Comment this out when using real Google Sheets
+                // const total = parseFloat(localStorage.getItem('demoTotal') || '1250.00');
                 
                 updateDisplay(total);
             } catch (error) {
                 console.error('Error fetching data:', error);
-                document.getElementById('loading').textContent = 'Error loading data. Please refresh.';
+                document.getElementById('loading').textContent = 'Error loading data: ' + error.message;
             }
         }
 
