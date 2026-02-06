@@ -622,21 +622,21 @@
         }
 
         function checkMilestone(amount) {
-            const currentMilestone = Math.floor(amount / 1000) * 1000;
+            const currentMilestone = Math.floor(amount / 5000) * 5000;
             if (currentMilestone > lastMilestone && lastMilestone > 0) {
                 triggerConfetti();
             }
             lastMilestone = currentMilestone;
 
-            const nextMilestone = Math.ceil(amount / 1000) * 1000;
+            const nextMilestone = Math.ceil(amount / 5000) * 5000;
             const remaining = nextMilestone - amount;
-            
-            if (amount >= 1000) {
-                document.getElementById('milestone').textContent = 
+
+            if (amount >= 5000) {
+                document.getElementById('milestone').textContent =
                     `🎉 $${remaining.toFixed(2)} to next milestone ($${nextMilestone.toLocaleString()})`;
             } else {
-                document.getElementById('milestone').textContent = 
-                    `$${(1000 - amount).toFixed(2)} to first $1,000 milestone!`;
+                document.getElementById('milestone').textContent =
+                    `$${(5000 - amount).toFixed(2)} to first $5,000 milestone!`;
             }
         }
 
