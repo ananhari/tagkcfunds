@@ -361,6 +361,13 @@
 
         .counter-content {
             display: none;
+            flex-direction: column;
+            flex: 1;
+            min-height: 0;
+        }
+
+        .counter-content.visible {
+            display: flex;
         }
 
         .amount-display {
@@ -372,7 +379,11 @@
             text-align: center;
             position: relative;
             overflow: hidden;
-            flex-shrink: 0;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            min-height: 0;
         }
 
         .amount-display::before {
@@ -1031,7 +1042,7 @@
 
         function updateDisplay(total, donationCount) {
             document.getElementById('loading').style.display = 'none';
-            document.getElementById('counterContent').style.display = 'block';
+            document.getElementById('counterContent').classList.add('visible');
 
             document.getElementById('totalAmount').textContent = 
                 '$' + total.toFixed(2).replace(/\B(?=(\d{3})+(?!\d))/g, ',');
